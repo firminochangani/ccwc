@@ -10,13 +10,22 @@ import (
 )
 
 func main() {
-	countCmd := flag.Bool("c", false, "ccwc -c path/to/file - Returns the number of bytes in the file specified")
+	countCharacterCmd := flag.Bool("c", false, "ccwc -c path/to/file - Returns the number of bytes in the file specified")
+	countLinesCmd := flag.Bool("l", false, "ccwc -l path/to/file - Returns the number of lines in the file specified")
 	flag.Parse()
 
 	fileName := os.Args[len(os.Args)-1]
 
-	if *countCmd {
-		err := countBytes(fileName)
+	if *countCharacterCmd {
+		err := countBytesInFile(fileName)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
+
+	if *countLinesCmd {
+		err := countLinesInFile(fileName)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -24,7 +33,34 @@ func main() {
 	}
 }
 
-func countBytes(fileName string) error {
+func countLinesInFile(fileName string) error {
+	f, err := os.Open(fileName)
+	if err != nil {
+		return err // TODO: refactor me
+	}
+	defer func() { _ = f.Close() }()
+
+	scanner := bufio.NewScanner(f)
+	totalLines := 0
+
+	for scanner.Scan() {
+		if errors.Is(scanner.Err(), io.EOF) {
+			break
+		}
+
+		if scanner.Err() != nil {
+			return err //TODO
+		}
+
+		totalLines++
+	}
+
+	fmt.Printf("%d %s", totalLines, fileName)
+
+	return nil
+}
+
+func countBytesInFile(fileName string) error {
 	f, err := os.Open(fileName)
 	if err != nil {
 		return fmt.Errorf("unable to open file '%s' due to: %v", fileName, err)
