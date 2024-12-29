@@ -8,17 +8,19 @@ import (
 	"io"
 	"os"
 	"strings"
+	"unicode/utf8"
 )
 
 func main() {
-	countCharacterCmd := flag.Bool("c", false, "ccwc -c path/to/file - Returns the number of bytes in the file specified")
+	countBytesCmd := flag.Bool("c", false, "ccwc -c path/to/file - Returns the number of bytes in the file specified")
 	countLinesCmd := flag.Bool("l", false, "ccwc -l path/to/file - Returns the number of lines in the file specified")
 	countWordsCmd := flag.Bool("w", false, "ccwc -w path/to/file - Returns the number of words in the file specified")
+	countCharactersCmd := flag.Bool("m", false, "ccwc -m path/to/file - Returns the number of characters in the file specified")
 	flag.Parse()
 
 	fileName := os.Args[len(os.Args)-1]
 
-	if *countCharacterCmd {
+	if *countBytesCmd {
 		err := countBytesInFile(fileName)
 		if err != nil {
 			fmt.Println(err)
@@ -36,6 +38,14 @@ func main() {
 
 	if *countWordsCmd {
 		err := countWordsInFile(fileName)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
+
+	if *countCharactersCmd {
+		err := countCharacterInFile(fileName)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -123,6 +133,37 @@ func countWordsInFile(fileName string) error {
 	}
 
 	fmt.Printf("%d %s\n", totalWords, fileName)
+
+	return nil
+}
+
+// FIXME: off by 4 bytes when compared to wc
+func countCharacterInFile(fileName string) error {
+	f, err := os.Open(fileName)
+	if err != nil {
+		return err // TODO: refactor me
+	}
+	defer func() { _ = f.Close() }()
+
+	totalCharacter := 0
+
+	buf := make([]byte, 1024)
+	reader := bufio.NewReader(f)
+
+	for {
+		n, err := reader.Read(buf)
+		if errors.Is(err, io.EOF) {
+			break
+		}
+
+		if err != nil {
+			return err //TODO
+		}
+
+		totalCharacter += utf8.RuneCount(buf[:n])
+	}
+
+	fmt.Printf("%d %s\n", totalCharacter, fileName)
 
 	return nil
 }
