@@ -137,7 +137,6 @@ func countWordsInFile(fileName string) error {
 	return nil
 }
 
-// FIXME: off by 4 bytes when compared to wc
 func countCharacterInFile(fileName string) error {
 	f, err := os.Open(fileName)
 	if err != nil {
@@ -147,20 +146,18 @@ func countCharacterInFile(fileName string) error {
 
 	totalCharacter := 0
 
-	buf := make([]byte, 1024)
 	reader := bufio.NewReader(f)
 
 	for {
-		n, err := reader.Read(buf)
+		line, err := reader.ReadBytes('\n')
 		if errors.Is(err, io.EOF) {
 			break
 		}
-
 		if err != nil {
-			return err //TODO
+			return err
 		}
 
-		totalCharacter += utf8.RuneCount(buf[:n])
+		totalCharacter += utf8.RuneCount(line)
 	}
 
 	fmt.Printf("%d %s\n", totalCharacter, fileName)
