@@ -20,147 +20,79 @@ func main() {
 
 	fileName := os.Args[len(os.Args)-1]
 
+	if strings.TrimSpace(fileName) == "" {
+		fmt.Println("A file must be specified. E.g.: ccwc -c path/to/file")
+		os.Exit(1)
+	}
+
+	f, err := os.Open(fileName)
+	if err != nil {
+		fmt.Printf("error opening the file '%s': %v", fileName, err)
+		return
+	}
+	defer func() { _ = f.Close() }()
+
+	result, err := getStatsFromReader(f)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	if *countBytesCmd {
-		err := countBytesInFile(fileName)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	}
-
-	if *countLinesCmd {
-		err := countLinesInFile(fileName)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-	}
-
-	if *countWordsCmd {
-		err := countWordsInFile(fileName)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		fmt.Printf("  %d %s\n", result.TotalBytes, fileName)
+		return
 	}
 
 	if *countCharactersCmd {
-		err := countCharacterInFile(fileName)
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		fmt.Printf("  %d %s\n", result.TotalCharacters, fileName)
+		return
 	}
+
+	if *countLinesCmd {
+		fmt.Printf("    %d %s\n", result.TotalLines, fileName)
+		return
+	}
+
+	if *countWordsCmd {
+		fmt.Printf("   %d %s\n", result.TotalWords, fileName)
+		return
+	}
+
+	fmt.Printf("    %d   %d  %d %s\n", result.TotalLines, result.TotalWords, result.TotalBytes, fileName)
 }
 
-func countLinesInFile(fileName string) error {
-	f, err := os.Open(fileName)
-	if err != nil {
-		return err // TODO: refactor me
-	}
-	defer func() { _ = f.Close() }()
-
-	scanner := bufio.NewScanner(f)
-	totalLines := 0
-
-	for scanner.Scan() {
-		if errors.Is(scanner.Err(), io.EOF) {
-			break
-		}
-
-		if scanner.Err() != nil {
-			return err //TODO
-		}
-
-		totalLines++
-	}
-
-	fmt.Printf("%d %s\n", totalLines, fileName)
-
-	return nil
+type Result struct {
+	TotalLines      int64
+	TotalBytes      int64
+	TotalWords      int
+	TotalCharacters int64
 }
 
-func countBytesInFile(fileName string) error {
-	f, err := os.Open(fileName)
-	if err != nil {
-		return fmt.Errorf("unable to open file '%s' due to: %v", fileName, err)
-	}
-	defer func() { _ = f.Close() }()
-
-	buf := make([]byte, 1024)
-	var totalBytes int64
-	reader := bufio.NewReader(f)
-
-	for {
-		n, err := reader.Read(buf)
-		if errors.Is(err, io.EOF) {
-			break
-		}
-
-		if err != nil {
-			return fmt.Errorf("error occurred trying to scane the file '%s': %v", fileName, err)
-		}
-
-		totalBytes += int64(n)
+func getStatsFromReader(r io.Reader) (Result, error) {
+	result := Result{
+		TotalLines:      0,
+		TotalBytes:      0,
+		TotalWords:      0,
+		TotalCharacters: 0,
 	}
 
-	// Print the output as specified
-	fmt.Printf("%d %s\n", totalBytes, fileName)
-
-	return nil
-}
-
-func countWordsInFile(fileName string) error {
-	f, err := os.Open(fileName)
-	if err != nil {
-		return err // TODO: refactor me
-	}
-	defer func() { _ = f.Close() }()
-
-	scanner := bufio.NewScanner(f)
-	totalWords := 0
-
-	for scanner.Scan() {
-		if errors.Is(scanner.Err(), io.EOF) {
-			break
-		}
-
-		if scanner.Err() != nil {
-			return err //TODO
-		}
-
-		totalWords += len(strings.Fields(scanner.Text()))
-	}
-
-	fmt.Printf("%d %s\n", totalWords, fileName)
-
-	return nil
-}
-
-func countCharacterInFile(fileName string) error {
-	f, err := os.Open(fileName)
-	if err != nil {
-		return err // TODO: refactor me
-	}
-	defer func() { _ = f.Close() }()
-
-	totalCharacter := 0
-
-	reader := bufio.NewReader(f)
+	reader := bufio.NewReader(r)
 
 	for {
 		line, err := reader.ReadBytes('\n')
+		if err != nil && !errors.Is(err, io.EOF) {
+			return result, fmt.Errorf("error reading line: %w", err)
+		}
+
+		result.TotalLines++
+		result.TotalBytes += int64(len(line))
+		result.TotalWords += len(strings.Fields(string(line)))
+		result.TotalCharacters += int64(utf8.RuneCount(line))
+
 		if errors.Is(err, io.EOF) {
 			break
 		}
-		if err != nil {
-			return err
-		}
-
-		totalCharacter += utf8.RuneCount(line)
 	}
 
-	fmt.Printf("%d %s\n", totalCharacter, fileName)
-
-	return nil
+	return result, nil
 }
