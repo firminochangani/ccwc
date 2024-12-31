@@ -40,3 +40,4 @@ jobs:
         with:
           version: v1.62.2
           args: --timeout 3m --verbose
+          working-directory: ./golang
