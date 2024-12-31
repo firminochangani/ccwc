@@ -4,11 +4,9 @@ A reimplementation of [wc](https://en.wikipedia.org/wiki/Wc_(Unix)) as based on 
 
 ## Instructions
 
-1 - Build a binary by running `make build` which will save the binary in `bin/ccwc`
-
-2 - Running commands against a file: `bin/ccwc -c path/to/file`
-
-3 - Running commands against the standard input: `cat path/to/file | bin/ccwc -c`
+- Build a binary by running `make build` which will save the binary in `bin/ccwc`
+- Running commands against a file: `bin/ccwc -c path/to/file`
+- Running commands against the standard input: `cat path/to/file | bin/ccwc -c`
 
 ## Commands implemented
 
