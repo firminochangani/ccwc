@@ -18,21 +18,29 @@ func main() {
 	countCharactersCmd := flag.Bool("m", false, "ccwc -m path/to/file - Returns the number of characters in the file specified")
 	flag.Parse()
 
-	fileName := os.Args[len(os.Args)-1]
+	var err error
+	var fileName string
+	var fileSource *os.File
 
-	if strings.TrimSpace(fileName) == "" {
-		fmt.Println("A file must be specified. E.g.: ccwc -c path/to/file")
-		os.Exit(1)
+	if len(os.Args) == 1 || len(os.Args) == 2 && (os.Args[1] == "-c" || os.Args[1] == "-l" || os.Args[1] == "-w" || os.Args[1] == "-m") {
+		fileSource = os.Stdin
+	} else {
+		fileName = os.Args[len(os.Args)-1]
+		fileSource, err = os.Open(fileName)
+		if err != nil {
+			fmt.Printf("error opening the file '%s': %v", fileName, err)
+			return
+		}
 	}
 
-	f, err := os.Open(fileName)
-	if err != nil {
-		fmt.Printf("error opening the file '%s': %v", fileName, err)
-		return
-	}
-	defer func() { _ = f.Close() }()
+	defer func() {
+		closeErr := fileSource.Close()
+		if closeErr != nil {
+			fmt.Printf("error closing file or stdin: %v\n", closeErr)
+		}
+	}()
 
-	result, err := getStatsFromReader(f)
+	result, err := getStatsFromReader(fileSource)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
